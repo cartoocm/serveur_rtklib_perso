@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
 Created on %(date)s
@@ -9,11 +10,11 @@ import os
 import numpy as np
 import gpstime as gps
 import gnsstoolbox.rinex_o as rx
-from gnsstoolbox import *
+#from gnsstoolbox import *
 #import math
 #import matplotlib.pyplot as plt
 #import skimage
-import pip
+#import pip
 import xml.etree.ElementTree as ET
 #from StringIO import StringIO
 #from operator import itemgetter, attrgetter, methodcaller
@@ -47,7 +48,7 @@ class rtklib_process():
                     for child2 in child:
                         self.RnxFileList.append(child2[1].text)
             self.directory = os.path.dirname(filename)
-            
+            print (self.directory)
 
     def __str__(self):
         s = "%-20s: %s\n" % ("Strategy",self.strategy)
@@ -73,7 +74,7 @@ class rtklib_process():
             Yrec = head.Y   
         if hasattr (head,'Z'):
             Zrec = head.Z
-        RGP = np.genfromtxt('stations.txt')  #   , dtype =None #lgenfromtxt does convert string the name of station 
+        RGP = np.genfromtxt('stations.txt',comments ="#",skip_header=4)  #   , dtype =None #lgenfromtxt does convert string the name of station 
         # to nan so i compenstate to number 0 -- 449 
 #        Xsta = RGP[:,1]
 #        Ysta = RGP[:,2]
@@ -130,9 +131,10 @@ class rtklib_process():
         
 
     def process(self):
-        print('Starting rtklib automatic process')
+        print('Starting rtklib automatic process we are here')
+        print("dirrrr",self.directory)
         print(self.directory,"\n\n",self.RnxFileList[0])
-        self.rinex_info(os.path.join(self.directory,self.RnxFileList[0]))
+        #self.rinex_info(os.path.join(self.directory,self.RnxFileList[0]))
         
         
 
@@ -159,11 +161,13 @@ if __name__ == "__main__":
 #    for i in pip.get_installed_distributions(local_only=True):
 #        print("-",i)
     R = rtklib_process()
-    
-#    filename = '/home/farah/DEPOT_CALCUL/request.xml'  # pour récuperer le numéro de stations demandé
-#    R.read(filename)
-    R.rinex_info()
-   # R.proche_station(n=10)
+
+    #R.directory = '/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL/2016-11-04T12:12:56Z_172.31.42.114'  # pour récuperer le numéro de stations demandé
+    R.read('/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL/2016-11-04T12:12:56Z_172.31.42.114/request.xml')
+    R.rinex_info(os.path.join(R.directory,R.RnxFileList[0]))
+    #R.rinex_info('/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL/2016-11-04T12:12:56Z_172.31.42.114/17301530.16o')
+    #R.rinex_info(filename)
+    # R.proche_station(n=10)
     t2 = gps.gpstime()
     print ('%.3f sec elapsed ' % (t2-t1))
 

@@ -1,14 +1,9 @@
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
-"""
-Created on %(date)s
-
-@author: %(username)s
-"""
-
 import re
 #import numpy as np
 import gpstime as gps
-from gnsstoolbox import *
+#from gnsstoolbox import *
 #import math
 #import matplotlib.pyplot as plt
 import pip
@@ -19,7 +14,8 @@ import RtklibProcess
 
 class ManageProcess():
     def __init__(self):
-        self.HomeDir = '/home/farah/DEPOT_CALCUL/'
+        #self.HomeDir = '/home/farah/DEPOT_CALCUL/'
+        self.HomeDir = '/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL/'
 
     def IsThereAnythingToDo(self):
 
