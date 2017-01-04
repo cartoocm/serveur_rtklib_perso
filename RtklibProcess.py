@@ -7,6 +7,7 @@ Created on %(date)s
 """
 import re
 import os
+import sys
 import numpy as np
 import gpstime as gps
 import gnsstoolbox.rinex_o as rx
@@ -157,13 +158,21 @@ class Station():
 if __name__ == "__main__":
 
     t1 = gps.gpstime()
+    
+    print("Nb parametres: ",len(sys.argv))
+    if (len(sys.argv)<2):
+        print("Usage: ....")
+        exit(0)
+    request_file=sys.argv[1]
+    print("Request file: "+request_file)
+    
     print("Packages (local only) :")
 #    for i in pip.get_installed_distributions(local_only=True):
 #        print("-",i)
     R = rtklib_process()
 
     #R.directory = '/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL/2016-11-04T12:12:56Z_172.31.42.114'  # pour récuperer le numéro de stations demandé
-    R.read('/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL/2016-11-04T12:12:56Z_172.31.42.114/request.xml')
+    R.read(request_file)
     R.rinex_info(os.path.join(R.directory,R.RnxFileList[0]))
     #R.rinex_info('/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL/2016-11-04T12:12:56Z_172.31.42.114/17301530.16o')
     #R.rinex_info(filename)
