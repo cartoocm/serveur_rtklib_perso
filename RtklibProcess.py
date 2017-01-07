@@ -7,6 +7,7 @@ Created on %(date)s
 """
 import ftplib
 import re
+import gzip
 import os
 import sys
 import numpy as np
@@ -86,12 +87,11 @@ class rtklib_process():
         
         if hasattr (head,'TIME_OF_FIRST_OBS'):
             self.tStart = head.TIME_OF_FIRST_OBS
-            #self.doy = self.tStart.doy
-            #self.yy= self.tStart.yy
+
             print ("first obs time",self.tStart.doy)
         if hasattr (head,'TIME_OF_LAST_OBS'):
             self.tEnd = head.TIME_OF_LAST_OBS
-            print ("end obs time",self.tEnd)
+#           print ("end obs time",self.tEnd)
 #
         #RGP = np.genfromtxt('stations.txt',comments ="#",skip_header=4)  #   , dtype =None #lgenfromtxt does convert string the name of station 
 
@@ -118,11 +118,12 @@ class rtklib_process():
         
         proche_stations = filter(lambda station : station.last_dist < self.max_distance*1000 , 
                                  all_stations_sorted[0:self.station_number])
-        self.all_stations = proche_stations
+        print("here-------------------------------------------------------------",proche_stations)
+        #self.all_stations = proche_stations
         self.proche_stations_names = [station.nom for station in proche_stations]
         print("les n stations les plus proches et dont les distances inférieure de la distance maximal \n\n")
             
-        for station in list(proche_stations):
+        for station in (proche_stations):
             print(station.nom,self.station_number, station.last_dist )
         print ("name list",self.proche_stations_names)
 #        for station in all_stations_filtred:
@@ -189,7 +190,7 @@ class rtklib_process():
         curennt_ftp_dir = ftp.pwd()
         ftp.cwd("/")
         ftp.cwd(ficftp_dir)
-        ftp_list_file = ftp.nlst()
+        ftp_list_file = ftp.nlst() # la liste des fichiers dans la réportoire ftp
         if not ficftp_name in ftp_list_file:
             print(ficftp_name,  " is not in this directory")
         else:
@@ -199,9 +200,34 @@ class rtklib_process():
                 
             with open(os.path.join(repdsk, ficdsk), 'wb') as f:
                 ftp.retrbinary('RETR ' + ficftp_name, f.write)
+            #os.system("gzip )
+                downloadedFilePath = os.path.join(repdsk,ficftp_name)
+            #print('ss',downloadedFilePath)
+#            with gzip.open(downloadedFilePath, 'rb') as f:
+#                    file_content = f.read()
+            #print("gzip -d "+ downloadedFilePath)
+                #os.system("gzip -d "+downloadedFilePath)
+                print(repdsk)
+                #print(ficftp_name)
+                #if (ficftp_name[-1] =="d"):
+                #print(x)
+#                x=os.system
+                #print("----------------------------------------",ficftp_name[:-2])
+                #print(os.getcwd())
+                #os.pwd(repdsk)
+                #print("----------------------------------------",repdsk,"\n\n",downloadedFilePath)
+                ff = downloadedFilePath[:-2]
+                os.chdir(repdsk)
+                print("----------------------------------------",os.path.join(repdsk,ficftp_name[:-2]))
+                print(ficftp_name);                
+                
+                
+                
+            #print('ssssssssssssssssssssssssssssss',file_content)
         ftp.cwd("/")
         ftp.cwd(curennt_ftp_dir) 
-        print("succès téléchargement radio diffusé")
+        #print("yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",curennt_ftp_dir)
+        
         
     def download_radio(self, ftp,ficftp, repdsk='.', ficdsk=None):
         """télécharge le fichier ficftp du serv. ftp dans le rép. repdsk du disque
@@ -211,10 +237,11 @@ class rtklib_process():
            - ficdsk: si mentionné => c'est le nom qui sera utilisé sur disque
         """
         print(ficftp)
-        #ficftp_name est le nom de fichhier à télécharger à partir de la station et fictftp_dir son current directory
+        #ficftp_name est le nom de fichier à télécharger à partir de la station et fictftp_dir son current directory
         ficftp_dir, ficftp_name1 = os.path.split(ficftp)        
         ficftp_name2 ="brdm"+ficftp_name1[4:-1]
         ficftp_names = [ficftp_name1, ficftp_name2]
+        #ficftp_names contient la liste de possibilité des nom des fichiers des orbites radiodiffusé
         curennt_ftp_dir = ftp.pwd()
         ftp.cwd("/")
         ftp.cwd(ficftp_dir)
@@ -235,15 +262,45 @@ class rtklib_process():
                 
             with open(os.path.join(repdsk, ficdsk), 'wb') as f:
                 ftp.retrbinary('RETR ' + ficftp_name, f.write)
+                downloadedFilePath = os.path.join(repdsk,ficftp_name)
+                #os.system("gzip -d "+downloadedFilePath )
         ftp.cwd("/")
-        ftp.cwd(curennt_ftp_dir)   
+        ftp.cwd(curennt_ftp_dir)  
+      
+    def unzip(self, obs_dir):
+        os.chdir(obs_dir)
+        for file in os.listdir(obs_dir):
+            #if file.endswith("d"):
+                print(file)
+                os.system("gzip -d "+file )
+    def gzip_crx(self, obs_dir):
+        os.chdir(obs_dir)
+        for file in os.listdir(obs_dir):
+            if file.endswith("d"):
+                print(file)
+                #os.system("gzip -d "+file )
+                os.system("./CRX2RNX " +file+" -s")
+                # effacer observation .d avec décompression .o
+                os.remove(file)
+                
+       # print("succès téléchargement radio diffusé")
         #self.fermerftp(ftp)
         
 # 
 #ftp.cwd(repftp)
-
-        
-
+#        def dezip_crx(self,crx_path,ficftp) :
+#            print(os.getcwd())
+#            ficftp_dir, ficftp_name = os.path.split(ficftp)
+#            os.system("cp "+crx_path+"/CRX2RNX " +ficftp_dir   )
+#            for file in ficftp :
+#                if ( file[-1]="d" ) :
+#                    os.system("./CRX2RNX "+file+" -s")
+    def calcul_rtklib(self, rep):
+           os.chdir(rep)
+           a =os.system("./rnx2rtkp 17301530.16o test.16o brdc1530.16n igr18993.sp3 -k static.conf -o out.pos")
+           print(a)
+               
+               
 class Station():
     def __init__(self,nom , X = 0,Y = 0, Z = 0):
         self.nom = nom
@@ -293,7 +350,7 @@ if __name__ == "__main__":
     #ficftp ="pub/data/"+str(R.tStart.yyyy)+"/"+str(R.tStart.doy)+"/data_30/"+stat+str(R.tStart.doy)+str("0.")+str(R.tStart.yy)+"d.Z"
     #fichier_ =stat1+str(R.tStart.doy)+"0."+str(R.tStart.yy)+"d.Z"
     print(R.directory)
-    obs_dir = os.path.abspath(os.path.join(R.directory,"../..","DEPOT_OBS",os.path.basename(R.directory)))
+    obs_dir = os.path.abspath(os.path.join(R.directory,"../..","DEPOT_OBS"))
     print("chemin",obs_dir)
 
     if not os.path.exists(obs_dir):
@@ -304,18 +361,21 @@ if __name__ == "__main__":
         ficftp ="pub/data/"+str(R.tStart.yyyy)+"/"+str(R.tStart.doy)+"/data_30/"+stat.lower()+str(R.tStart.doy)+str("0.")+str(R.tStart.yy)+"d.Z"
         R.downloadftp(ftp,ficftp,obs_dir)
         ftp.quit()
-        
+       
+   
+       
     # téléchargement des orbites précise
     
     wk= R.tStart.wk
     wd = R.tStart.wd
-    print("week in gps",wk,int(wd))
+    #print("week in gps",wk,int(wd))
     #igr18993.sp3.Z
     ficftp_orb_pr ="pub/products/ephemerides/"+str(wk)+"/igr"+str(wk)+str(int(wd))+".sp3.Z"
     #print(ficftp_orb_pr)
     #orb_pre = 
     ftp=R.connexionftp()
     R.downloadftp(ftp,ficftp_orb_pr,obs_dir)
+    R.gzip_crx(obs_dir)
     print("téléchargement des orbites précise")
     ftp.quit()
     
@@ -323,7 +383,12 @@ if __name__ == "__main__":
     ficftp_radio ="pub/data/"+str(R.tStart.yyyy)+"/"+str(R.tStart.doy)+"/data_30/"+"brdc"+str(R.tStart.doy)+str("0.")+str(R.tStart.yy)+"n.Z"
     # ftp://rgpdata.ign.fr/pub/data/2016/153/data_30/brdc1530.16n.Z   --- n : gps g : glonass
     ftp=R.connexionftp()
-    R.downloadftp(ftp,ficftp_radio,obs_dir)
+    R.download_radio(ftp,ficftp_radio,obs_dir)
+    
+    R.unzip(obs_dir)     
+     # décompression hanataka 
+    R.gzip_crx(obs_dir)    
+    R.calcul_rtklib(obs_dir)
     t2 = gps.gpstime()
     print ('%.3f sec elapsed ' % (t2-t1))
 
