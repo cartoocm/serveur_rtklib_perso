@@ -14,14 +14,9 @@ import numpy as np
 import gpstime as gps
 import gnsstoolbox.rinex_o as rx
 #from gnsstoolbox import *
-#import math
-#import matplotlib.pyplot as plt
-#import skimage
-#import pip
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
-#from StringIO import StringIO
-#from operator import itemgetter, attrgetter, methodcaller
+
 
 class rtklib_process():
     def __init__(self):
@@ -116,15 +111,20 @@ class rtklib_process():
 #        for station in all_stations_sorted:
 #            print(station.nom,station.last_dist)
         
-        proche_stations = filter(lambda station : station.last_dist < self.max_distance*1000 , 
-                                 all_stations_sorted[0:self.station_number])
-        print("here-------------------------------------------------------------",proche_stations)
-        #self.all_stations = proche_stations
+        proche_stations =list( filter(lambda station : station.last_dist < self.max_distance*1000 , 
+                                 all_stations_sorted[0:self.station_number]))
+        print("here-------------------------------------------------------------",len(proche_stations))
+
+        #self.proche_stations_list = proche_stations
         self.proche_stations_names = [station.nom for station in proche_stations]
         print("les n stations les plus proches et dont les distances inférieure de la distance maximal \n\n")
             
         for station in (proche_stations):
-            print(station.nom,self.station_number, station.last_dist )
+            #self.proche_stations_list.append(
+            print("//////////////////////////////////////////////////////////////////////////////////")
+            print("nom "+station.nom + " X "+str(station.X)+" Y "+str(station.Y)+" Z "+str(station.Z)+" distance au recepteur "+str(station.last_dist))
+            print("//////////////////////////////////////////////////////////////////////////////////")
+            #print(station.nom,self.station_number, station.last_dist )
         print ("name list",self.proche_stations_names)
 #        for station in all_stations_filtred:
 #            print("finalement",station.nom,station.last_dist,self.max_distance)
@@ -199,34 +199,12 @@ class rtklib_process():
                 ficdsk=ficftp_name
                 
             with open(os.path.join(repdsk, ficdsk), 'wb') as f:
-                ftp.retrbinary('RETR ' + ficftp_name, f.write)
-            #os.system("gzip )
+                ftp.retrbinary('RETR ' + ficftp_name, f.write))
                 downloadedFilePath = os.path.join(repdsk,ficftp_name)
-            #print('ss',downloadedFilePath)
-#            with gzip.open(downloadedFilePath, 'rb') as f:
-#                    file_content = f.read()
-            #print("gzip -d "+ downloadedFilePath)
-                #os.system("gzip -d "+downloadedFilePath)
-                print(repdsk)
-                #print(ficftp_name)
-                #if (ficftp_name[-1] =="d"):
-                #print(x)
-#                x=os.system
-                #print("----------------------------------------",ficftp_name[:-2])
-                #print(os.getcwd())
-                #os.pwd(repdsk)
-                #print("----------------------------------------",repdsk,"\n\n",downloadedFilePath)
-                ff = downloadedFilePath[:-2]
-                os.chdir(repdsk)
-                print("----------------------------------------",os.path.join(repdsk,ficftp_name[:-2]))
-                print(ficftp_name);                
-                
-                
-                
-            #print('ssssssssssssssssssssssssssssss',file_content)
+                print("file :",downloadedFilePath," is successfully downloaded")
         ftp.cwd("/")
         ftp.cwd(curennt_ftp_dir) 
-        #print("yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",curennt_ftp_dir)
+
         
         
     def download_radio(self, ftp,ficftp, repdsk='.', ficdsk=None):
@@ -270,7 +248,7 @@ class rtklib_process():
     def unzip(self, obs_dir):
         os.chdir(obs_dir)
         for file in os.listdir(obs_dir):
-            #if file.endswith("d"):
+            if (os.path.isfile(file) and file.endswith("Z")):
                 print(file)
                 os.system("gzip -d "+file )
     def gzip_crx(self, obs_dir):
@@ -283,23 +261,37 @@ class rtklib_process():
                 # effacer observation .d avec décompression .o
                 os.remove(file)
                 
-       # print("succès téléchargement radio diffusé")
+    def get_files_by_ext(self,directory,ext):
+        os.chdir(directory)
+        listeFiles=[]
+        for file in os.listdir(directory):
+            if file.endswith(ext):
+                #print(file)
+                listeFiles.append(file)
+        return listeFiles
+                
+        
         #self.fermerftp(ftp)
         
-# 
-#ftp.cwd(repftp)
-#        def dezip_crx(self,crx_path,ficftp) :
-#            print(os.getcwd())
-#            ficftp_dir, ficftp_name = os.path.split(ficftp)
-#            os.system("cp "+crx_path+"/CRX2RNX " +ficftp_dir   )
-#            for file in ficftp :
-#                if ( file[-1]="d" ) :
-#                    os.system("./CRX2RNX "+file+" -s")
-    def calcul_rtklib(self, rep):
-           os.chdir(rep)
-           a =os.system("./rnx2rtkp 17301530.16o test.16o brdc1530.16n igr18993.sp3 -k static.conf -o out.pos")
-           print(a)
-               
+
+    def calcul_rtklib(self, rep_obs, rep_rec):
+           os.chdir(rep_obs)
+           file_sp3 = self.get_files_by_ext(rep_obs,"sp3")[0]
+           #un seul fichier sp3
+           file_brdc = self.get_files_by_ext(rep_obs,"n")[0]
+           #un seul fichier brdc
+           files_obs = self.get_files_by_ext(rep_obs,"o")
+           #les fichiers observations des stations
+           file_rec = self.get_files_by_ext(rep_rec,"o")[0]
+           file_conf = self.get_files_by_ext(rep_obs,"conf")[0]
+#           print ("test extensio file33333333333333333333333333333333333333")
+#           print(file_sp3,"\n\n",file_brdc,"\n\n",files_obs,"\n\n",file_rec,"\n\n",file_conf)
+           for i in range(len(files_obs)):
+           # a =os.system("./rnx2rtkp" 17301530.16o test.16o brdc1530.16n igr18993.sp3 -k static.conf -o out.pos")
+           #print(a)
+               os.system("./rnx2rtkp " +os.path.join(rep_rec,file_rec)+" "+files_obs[i]+" "+file_brdc+" "+file_sp3+" -k "+file_conf+" -o out"+str(i)+".pos")
+               print("./rnx2rtkp " +os.path.join(rep_rec,file_rec)+" "+files_obs[i]+" "+file_brdc+" "+file_sp3+" -k "+file_conf+" -o out"+str(i)+".pos")
+
                
 class Station():
     def __init__(self,nom , X = 0,Y = 0, Z = 0):
@@ -375,7 +367,7 @@ if __name__ == "__main__":
     #orb_pre = 
     ftp=R.connexionftp()
     R.downloadftp(ftp,ficftp_orb_pr,obs_dir)
-    R.gzip_crx(obs_dir)
+    #R.gzip_crx(obs_dir)
     print("téléchargement des orbites précise")
     ftp.quit()
     
@@ -388,8 +380,12 @@ if __name__ == "__main__":
     R.unzip(obs_dir)     
      # décompression hanataka 
     R.gzip_crx(obs_dir)    
-    R.calcul_rtklib(obs_dir)
+    #R.calcul_rtklib(obs_dir)
+    R.calcul_rtklib(obs_dir,os.path.abspath(R.directory))
+    #print ("9999999999999999999999999999999999999999999999999",os.path.abspath(R.directory))
+    file_rec = R.get_files_by_ext(obs_dir,"sp3")
     t2 = gps.gpstime()
+    #print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"+file_rec, type(file_rec))
     print ('%.3f sec elapsed ' % (t2-t1))
 
 
