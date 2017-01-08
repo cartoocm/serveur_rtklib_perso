@@ -5,6 +5,7 @@ Created on %(date)s
 
 @author: %(username)s
 """
+
 import ftplib
 import re
 import gzip
@@ -16,7 +17,7 @@ import gnsstoolbox.rinex_o as rx
 #from gnsstoolbox import *
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
-
+import RtklibUtils as utils
 
 class rtklib_process():
     def __init__(self):
@@ -28,6 +29,7 @@ class rtklib_process():
         self.RnxFileList = []
         self.all_stations =[]
         self.proche_stations_names =[]
+        self.proche_stations_list = []
         self.tStart = gps.gpstime()
         self.tEnd = gps.gpstime()
         
@@ -107,15 +109,19 @@ class rtklib_process():
             station.calc_dist(Xrec,Yrec,Zrec)
         # all_stations_sorted est une liste de toutes les objets Stations trié par leur distance % au rec
         all_stations_sorted = sorted(self.all_stations,key=lambda station : station.last_dist )# objet entré Station (nommé station)critére detrie station.last_dist
-        
+       
+        all_stations_sorted_filtred =list( filter(lambda station : station.last_dist < self.max_distance*1000 , all_stations_sorted))
+
+        print("here-------------------------------------------------------------",len(all_stations_sorted_filtred))
+
+        proche_stations =self.prepare_proche_station(all_stations_sorted_filtred,self.station_number)
+
 #        for station in all_stations_sorted:
 #            print(station.nom,station.last_dist)
         
-        proche_stations =list( filter(lambda station : station.last_dist < self.max_distance*1000 , 
-                                 all_stations_sorted[0:self.station_number]))
         print("here-------------------------------------------------------------",len(proche_stations))
 
-        #self.proche_stations_list = proche_stations
+        self.proche_stations_list = proche_stations
         self.proche_stations_names = [station.nom for station in proche_stations]
         print("les n stations les plus proches et dont les distances inférieure de la distance maximal \n\n")
             
@@ -134,7 +140,38 @@ class rtklib_process():
         print("approximated coordinate",Xrec,Yrec,Zrec)
         return (Xrec,Yrec,Zrec)
 
+    def prepare_proche_station(self,all_sorted_list,station_number):
+        ftp = self.connexionftp() 
+        proche_stations_list =[]
+        ficftp_dir = "pub/data/"+str(self.tStart.yyyy)+"/"+str(self.tStart.doy)+"/data_30"
+        ftp.cwd(ficftp_dir)
+        print ("ftp is here eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",ftp.pwd())
+        curennt_ftp_dir = ftp.pwd()
+        ftp.cwd("/")
+        ftp.cwd(ficftp_dir)
+        ftp_list_file = ftp.nlst() # la liste des fichiers dans la réportoire ftp
+        for stat in   all_sorted_list :
+            ficftp_name = stat.nom.lower()+str(self.tStart.doy)+str("0.")+str(self.tStart.yy)+"d.Z"
+            ficftp = os.path.join(ficftp_dir,ficftp_name)
+            
+            if ficftp_name in ftp_list_file:
+                print(ficftp_name,  " is in this directory")
+                proche_stations_list.append(stat)
+                print("*********dkhalllllllllllllllll******************----",len(proche_stations_list))
         
+            if (len(proche_stations_list) == station_number ):
+                print("*********l9ahom elkoll*****************----",len(proche_stations_list))
+                break
+        ftp.cwd("/")
+        ftp.cwd(curennt_ftp_dir) 
+
+         #print(ftp.nlst())
+         #print("current directory ftp " , ftp.pwd())  
+        #print (ftp.nlst(ficftp_dir) ) 
+        print("******************************************************************----",len(proche_stations_list))
+        
+        ftp.quit()
+        return proche_stations_list
 
     def process(self):
         """
@@ -199,7 +236,7 @@ class rtklib_process():
                 ficdsk=ficftp_name
                 
             with open(os.path.join(repdsk, ficdsk), 'wb') as f:
-                ftp.retrbinary('RETR ' + ficftp_name, f.write))
+                ftp.retrbinary('RETR ' + ficftp_name, f.write)
                 downloadedFilePath = os.path.join(repdsk,ficftp_name)
                 print("file :",downloadedFilePath," is successfully downloaded")
         ftp.cwd("/")
@@ -333,14 +370,9 @@ if __name__ == "__main__":
     print("test  qppel des variable")
     print("listeeeeeeeeeeeee",R.proche_stations_names)
     print("doy**************",R.tStart.doy)
-    stat1 = R.proche_stations_names[0].lower()
-    #ftp.pwd("ftp://rgpdata.ensg.eu/data/"+R.tStart.yyyy+"/"+R.tStart.doy+"/data_30/"+stat1)
-    #ftp://rgpdata.ensg.eu/pub/data/2016/017/data_30/abmf0170.16d.Z
-    print("ftp://rgpdata.ensg.eu/pub/data/"+str(R.tStart.yyyy)+"/"+str(R.tStart.doy)
-    +"/data_30/"+stat1+str(R.tStart.doy)+str("0.")+str(R.tStart.yy)+"d.Z")
+
+    #print("ftp://rgpdata.ensg.eu/pub/data/"+str(R.tStart.yyyy)+"/"+str(R.tStart.doy)+"/data_30/"+stat1+str(R.tStart.doy)+str("0.")+str(R.tStart.yy)+"d.Z")
     
-    #ficftp ="pub/data/"+str(R.tStart.yyyy)+"/"+str(R.tStart.doy)+"/data_30/"+stat+str(R.tStart.doy)+str("0.")+str(R.tStart.yy)+"d.Z"
-    #fichier_ =stat1+str(R.tStart.doy)+"0."+str(R.tStart.yy)+"d.Z"
     print(R.directory)
     obs_dir = os.path.abspath(os.path.join(R.directory,"../..","DEPOT_OBS"))
     print("chemin",obs_dir)
@@ -383,6 +415,11 @@ if __name__ == "__main__":
     #R.calcul_rtklib(obs_dir)
     R.calcul_rtklib(obs_dir,os.path.abspath(R.directory))
     #print ("9999999999999999999999999999999999999999999999999",os.path.abspath(R.directory))
+    
+    #after extracting n pos file for the position our receiver we are going to send mail 
+    
+    pos_files = R.get_files_by_ext(obs_dir,"pos")
+    utils.send_mail('serveurRtklib@gmail.com', 'farah.battikh@ensg.eu', "subject", "here is a test",files=pos_files, server="smtp.gmail.com", port=587, username='serveurRtklib@gmail.com', password='rtklibensg', isTls=True) 
     file_rec = R.get_files_by_ext(obs_dir,"sp3")
     t2 = gps.gpstime()
     #print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"+file_rec, type(file_rec))
