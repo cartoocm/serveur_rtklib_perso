@@ -6,9 +6,8 @@ Created on %(date)s
 @author: %(username)s
 """
 
-import ftplib
+
 import re
-import gzip
 import os
 import sys
 import numpy as np
@@ -18,6 +17,7 @@ import gnsstoolbox.rinex_o as rx
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
 import RtklibUtils as utils
+from Station import *
 
 class rtklib_process():
     def __init__(self):
@@ -45,6 +45,8 @@ class rtklib_process():
                             self.station_number = int(child2.text)
                         if re.search(child2.tag,'max_distance'):
                             self.max_distance = int(child2.text)
+                        if re.search(child2.tag,'user_mail'):
+                            self.mail = child2.text
 
                 if child.tag=='files':
                     for child2 in child:
@@ -141,35 +143,26 @@ class rtklib_process():
         return (Xrec,Yrec,Zrec)
 
     def prepare_proche_station(self,all_sorted_list,station_number):
-        ftp = self.connexionftp() 
+        ftp = utils.connexionftp() 
         proche_stations_list =[]
         ficftp_dir = "pub/data/"+str(self.tStart.yyyy)+"/"+str(self.tStart.doy)+"/data_30"
         ftp.cwd(ficftp_dir)
-        print ("ftp is here eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",ftp.pwd())
         curennt_ftp_dir = ftp.pwd()
         ftp.cwd("/")
         ftp.cwd(ficftp_dir)
         ftp_list_file = ftp.nlst() # la liste des fichiers dans la réportoire ftp
         for stat in   all_sorted_list :
             ficftp_name = stat.nom.lower()+str(self.tStart.doy)+str("0.")+str(self.tStart.yy)+"d.Z"
-            ficftp = os.path.join(ficftp_dir,ficftp_name)
+#            ficftp = os.path.join(ficftp_dir,ficftp_name)
             
             if ficftp_name in ftp_list_file:
                 print(ficftp_name,  " is in this directory")
                 proche_stations_list.append(stat)
-                print("*********dkhalllllllllllllllll******************----",len(proche_stations_list))
         
             if (len(proche_stations_list) == station_number ):
-                print("*********l9ahom elkoll*****************----",len(proche_stations_list))
                 break
         ftp.cwd("/")
         ftp.cwd(curennt_ftp_dir) 
-
-         #print(ftp.nlst())
-         #print("current directory ftp " , ftp.pwd())  
-        #print (ftp.nlst(ficftp_dir) ) 
-        print("******************************************************************----",len(proche_stations_list))
-        
         ftp.quit()
         return proche_stations_list
 
@@ -181,38 +174,6 @@ class rtklib_process():
         print("dirrrr",self.directory)
         print(self.directory,"\n\n",self.RnxFileList[0])
         #self.rinex_info(os.path.join(self.directory,self.RnxFileList[0]))
-        
-    def connexionftp(self,adresseftp="rgpdata.ensg.eu", nom='anonymous', mdpasse='anonymous@', passif=True):
-        """connexion au serveur ftp et ouverture de la session
-           - adresseftp: adresse du serveur ftp
-           - nom: nom de l'utilisateur enregistré ('anonymous' par défaut)
-           - mdpasse: mot de passe de l'utilisateur ('anonymous@' par défaut)
-           - passif: active ou désactive le mode passif (True par défaut)
-           retourne la variable 'ftplib.FTP' après connexion et ouverture de session
-        """
-#        try:
-            
-        ftp = ftplib.FTP()
-        ftp.connect(adresseftp)
-        ftp.login(nom, mdpasse)
-        ftp.set_pasv(passif)
-        print("connexion établie")
-#        except:
-##            ftp = ftplib.FTP()
-##            ftp.connect("ftp://rgpdata.ign.fr")
-##            ftp.login(nom, mdpasse)
-##            ftp.set_pasv(passif)
-#            self.connexionftp("ftp://rgpdata.ign.fr")
-        return ftp
-        
-    def fermerftp(self,ftp):
-        """ferme la connexion ftp
-           - ftp: variable 'ftplib.FTP' sur une connexion ouverte
-        """
-        try:
-            ftp.quit()
-        except:
-            ftp.close()
             
     def downloadftp(self, ftp,ficftp, repdsk='.', ficdsk=None):
         """télécharge le fichier ficftp du serv. ftp dans le rép. repdsk du disque
@@ -278,7 +239,6 @@ class rtklib_process():
             with open(os.path.join(repdsk, ficdsk), 'wb') as f:
                 ftp.retrbinary('RETR ' + ficftp_name, f.write)
                 downloadedFilePath = os.path.join(repdsk,ficftp_name)
-                #os.system("gzip -d "+downloadedFilePath )
         ftp.cwd("/")
         ftp.cwd(curennt_ftp_dir)  
       
@@ -298,29 +258,20 @@ class rtklib_process():
                 # effacer observation .d avec décompression .o
                 os.remove(file)
                 
-    def get_files_by_ext(self,directory,ext):
-        os.chdir(directory)
-        listeFiles=[]
-        for file in os.listdir(directory):
-            if file.endswith(ext):
-                #print(file)
-                listeFiles.append(file)
-        return listeFiles
+
                 
-        
-        #self.fermerftp(ftp)
         
 
     def calcul_rtklib(self, rep_obs, rep_rec):
            os.chdir(rep_obs)
-           file_sp3 = self.get_files_by_ext(rep_obs,"sp3")[0]
+           file_sp3 = utils.get_files_by_ext(rep_obs,"sp3")[0]
            #un seul fichier sp3
-           file_brdc = self.get_files_by_ext(rep_obs,"n")[0]
+           file_brdc = utils.get_files_by_ext(rep_obs,"n")[0]
            #un seul fichier brdc
-           files_obs = self.get_files_by_ext(rep_obs,"o")
+           files_obs = utils.get_files_by_ext(rep_obs,"o")
            #les fichiers observations des stations
-           file_rec = self.get_files_by_ext(rep_rec,"o")[0]
-           file_conf = self.get_files_by_ext(rep_obs,"conf")[0]
+           file_rec = utils.get_files_by_ext(rep_rec,"o")[0]
+           file_conf = utils.get_files_by_ext(rep_obs,"conf")[0]
 #           print ("test extensio file33333333333333333333333333333333333333")
 #           print(file_sp3,"\n\n",file_brdc,"\n\n",files_obs,"\n\n",file_rec,"\n\n",file_conf)
            for i in range(len(files_obs)):
@@ -328,23 +279,7 @@ class rtklib_process():
            #print(a)
                os.system("./rnx2rtkp " +os.path.join(rep_rec,file_rec)+" "+files_obs[i]+" "+file_brdc+" "+file_sp3+" -k "+file_conf+" -o out"+str(i)+".pos")
                print("./rnx2rtkp " +os.path.join(rep_rec,file_rec)+" "+files_obs[i]+" "+file_brdc+" "+file_sp3+" -k "+file_conf+" -o out"+str(i)+".pos")
-
-               
-class Station():
-    def __init__(self,nom , X = 0,Y = 0, Z = 0):
-        self.nom = nom
-        self.X = X
-        self.Y = Y
-        self.Z = Z
-        self.last_dist=-1
-    def calc_dist(self,Xrec,Yrec,Zrec):
-        self.last_dist = np.sqrt(((self.X - Xrec)**(2 ))+ ((self.Y - Yrec)**(2)) +(self.Z- Zrec )**(2))
-        return self.last_dist
-        
-    
-
-    
-    
+   
     
 if __name__ == "__main__":
 
@@ -381,7 +316,7 @@ if __name__ == "__main__":
         os.makedirs(obs_dir)
    # os.mkdir(obs_dir) does not work FileExistsError
     for stat in R.proche_stations_names:
-        ftp=R.connexionftp()
+        ftp=utils.connexionftp()
         ficftp ="pub/data/"+str(R.tStart.yyyy)+"/"+str(R.tStart.doy)+"/data_30/"+stat.lower()+str(R.tStart.doy)+str("0.")+str(R.tStart.yy)+"d.Z"
         R.downloadftp(ftp,ficftp,obs_dir)
         ftp.quit()
@@ -397,7 +332,7 @@ if __name__ == "__main__":
     ficftp_orb_pr ="pub/products/ephemerides/"+str(wk)+"/igr"+str(wk)+str(int(wd))+".sp3.Z"
     #print(ficftp_orb_pr)
     #orb_pre = 
-    ftp=R.connexionftp()
+    ftp=utils.connexionftp()
     R.downloadftp(ftp,ficftp_orb_pr,obs_dir)
     #R.gzip_crx(obs_dir)
     print("téléchargement des orbites précise")
@@ -406,7 +341,7 @@ if __name__ == "__main__":
     #    téléchargement des éphémérides radio diffusés
     ficftp_radio ="pub/data/"+str(R.tStart.yyyy)+"/"+str(R.tStart.doy)+"/data_30/"+"brdc"+str(R.tStart.doy)+str("0.")+str(R.tStart.yy)+"n.Z"
     # ftp://rgpdata.ign.fr/pub/data/2016/153/data_30/brdc1530.16n.Z   --- n : gps g : glonass
-    ftp=R.connexionftp()
+    ftp=utils.connexionftp()
     R.download_radio(ftp,ficftp_radio,obs_dir)
     
     R.unzip(obs_dir)     
@@ -414,13 +349,11 @@ if __name__ == "__main__":
     R.gzip_crx(obs_dir)    
     #R.calcul_rtklib(obs_dir)
     R.calcul_rtklib(obs_dir,os.path.abspath(R.directory))
-    #print ("9999999999999999999999999999999999999999999999999",os.path.abspath(R.directory))
     
     #after extracting n pos file for the position our receiver we are going to send mail 
     
-    pos_files = R.get_files_by_ext(obs_dir,"pos")
-    utils.send_mail('serveurRtklib@gmail.com', 'farah.battikh@ensg.eu', "subject", "here is a test",files=pos_files, server="smtp.gmail.com", port=587, username='serveurRtklib@gmail.com', password='rtklibensg', isTls=True) 
-    file_rec = R.get_files_by_ext(obs_dir,"sp3")
+    pos_files = utils.get_files_by_ext(obs_dir,"pos")
+    utils.send_mail('serveurRtklib@gmail.com', R.mail, "subject", "here is a test",files=pos_files, server="smtp.gmail.com", port=587, username='serveurRtklib@gmail.com', password='rtklibensg', isTls=True) 
     t2 = gps.gpstime()
     #print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"+file_rec, type(file_rec))
     print ('%.3f sec elapsed ' % (t2-t1))

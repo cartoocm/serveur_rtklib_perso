@@ -5,7 +5,7 @@ Created on Sun Jan  8 22:42:41 2017
 
 @author: farah
 """
-
+import ftplib
 import smtplib, os
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -35,4 +35,44 @@ def send_mail( send_from, send_to, subject, text, files=[], server="localhost", 
     smtp.sendmail(send_from, send_to, msg.as_string())
     smtp.quit()
 
-send_mail('serveurRtklib@gmail.com', 'farah.battikh@ensg.eu', "subject", "here is a test", files=['/media/farah/Data/PPMD-PERSO/e_mail_py/file1.txt','/media/farah/Data/PPMD-PERSO/e_mail_py/file2.txt'], server="smtp.gmail.com", port=587, username='serveurRtklib@gmail.com', password='rtklibensg', isTls=True) 
+def get_files_by_ext(directory,ext):
+    os.chdir(directory)
+    listeFiles=[]
+    for file in os.listdir(directory):
+        if file.endswith(ext):
+            #print(file)
+            listeFiles.append(file)
+    return listeFiles
+    
+    
+def connexionftp(adresseftp="rgpdata.ensg.eu", nom='anonymous', mdpasse='anonymous@', passif=True):
+        """connexion au serveur ftp et ouverture de la session
+           - adresseftp: adresse du serveur ftp
+           - nom: nom de l'utilisateur enregistré ('anonymous' par défaut)
+           - mdpasse: mot de passe de l'utilisateur ('anonymous@' par défaut)
+           - passif: active ou désactive le mode passif (True par défaut)
+           retourne la variable 'ftplib.FTP' après connexion et ouverture de session
+        """
+#        try:
+            
+        ftp = ftplib.FTP()
+        ftp.connect(adresseftp)
+        ftp.login(nom, mdpasse)
+        ftp.set_pasv(passif)
+        print("connexion établie")
+#        except:
+##            ftp = ftplib.FTP()
+##            ftp.connect("ftp://rgpdata.ign.fr")
+##            ftp.login(nom, mdpasse)
+##            ftp.set_pasv(passif)
+#            self.connexionftp("ftp://rgpdata.ign.fr")
+        return ftp
+        
+def fermerftp(ftp):
+        """ferme la connexion ftp
+           - ftp: variable 'ftplib.FTP' sur une connexion ouverte
+        """
+        try:
+            ftp.quit()
+        except:
+            ftp.close()    
