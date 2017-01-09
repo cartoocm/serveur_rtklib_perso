@@ -324,7 +324,8 @@ if __name__ == "__main__":
    
        
     # téléchargement des orbites précise
-    
+    project_directory = os.getcwd()
+    print("dddddddddddddddddddddddddddddddddddddddddddd",project_directory)
     wk= R.tStart.wk
     wd = R.tStart.wd
     #print("week in gps",wk,int(wd))
@@ -353,7 +354,11 @@ if __name__ == "__main__":
     #after extracting n pos file for the position our receiver we are going to send mail 
     
     pos_files = utils.get_files_by_ext(obs_dir,"pos")
-    utils.send_mail('serveurRtklib@gmail.com', R.mail, "subject", "here is a test",files=pos_files, server="smtp.gmail.com", port=587, username='serveurRtklib@gmail.com', password='rtklibensg', isTls=True) 
+    #utils.send_mail('serveurRtklib@gmail.com', R.mail, "subject", "here is a test",files=pos_files, server="smtp.gmail.com", port=587, username='serveurRtklib@gmail.com', password='rtklibensg', isTls=True) 
+    
+    #os.chdir(project_directory)
+    utils.send_mail(R.mail, "Position final", "Veuillez trouvez ci-joint la liste de fichiers position ",pos_files,project_directory) 
+        
     t2 = gps.gpstime()
     #print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"+file_rec, type(file_rec))
     print ('%.3f sec elapsed ' % (t2-t1))
