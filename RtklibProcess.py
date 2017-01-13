@@ -32,6 +32,10 @@ class rtklib_process():
         self.proche_stations_list = []
         self.tStart = gps.gpstime()
         self.tEnd = gps.gpstime()
+        self.projectPath = utils.get_project_path()
+        #self.requestPath = utils.get_request_path()
+        #self.observationPath = utils.get_observation_path()
+        self.exeConfPath = utils.get_exeConf_path()
         
     def read(self,filename):
             tree = ET.parse(filename)
@@ -143,6 +147,11 @@ class rtklib_process():
         return (Xrec,Yrec,Zrec)
 
     def prepare_proche_station(self,all_sorted_list,station_number):
+        """ this function would find the n nearest stations and that have data at the date of observation 
+            on the ftp server
+            output : the list of name of the n nearest stations     
+        """        
+        
         ftp = utils.connexionftp() 
         proche_stations_list =[]
         ficftp_dir = "pub/data/"+str(self.tStart.yyyy)+"/"+str(self.tStart.doy)+"/data_30"
@@ -241,20 +250,53 @@ class rtklib_process():
                 downloadedFilePath = os.path.join(repdsk,ficftp_name)
         ftp.cwd("/")
         ftp.cwd(curennt_ftp_dir)  
+        
+    def download_or_precise(self, ftp,ficftp, repdsk='.', ficdsk=None):
+        """download precise orbite 
+        """
+        ficftp_dir, ficftp_name1 = os.path.split(ficftp) 
+        ficftp_name2 = "igr"+ficftp_name1[3:]
+        ficftp_name3 = "igu"+ficftp_name1[3:]
+        ficftp_names = [ficftp_name1, ficftp_name2,ficftp_name3]
+        curennt_ftp_dir = ftp.pwd()
+        ftp.cwd("/")
+        ftp.cwd(ficftp_dir)
+        ftp_list_file = ftp.nlst()
+        # boucle igs en premier psi trouve pas igr sinon igu
+        ficftp_name = None
+        for name in ficftp_names:
+            if not name in ftp_list_file:
+                print(name,  " is not in this directory")
+            else :
+                ficftp_name = name
+                break
+            #+str(R.tStart.doy)+str("0.")+str(R.tStart.yy)+"n.Z"
+            
+        if ficftp_name:            
+            if ficdsk==None:
+                ficdsk=ficftp_name
+                
+            with open(os.path.join(repdsk, ficdsk), 'wb') as f:
+                ftp.retrbinary('RETR ' + ficftp_name, f.write)
+#                downloadedFilePath = os.path.join(repdsk,ficftp_name)
+        ftp.cwd("/")
+        ftp.cwd(curennt_ftp_dir) 
+        print("precise succées,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,")
       
     def unzip(self, obs_dir):
         os.chdir(obs_dir)
         for file in os.listdir(obs_dir):
             if (os.path.isfile(file) and file.endswith("Z")):
-                print(file)
+                #print(file)
                 os.system("gzip -d "+file )
+                
     def gzip_crx(self, obs_dir):
         os.chdir(obs_dir)
         for file in os.listdir(obs_dir):
             if file.endswith("d"):
                 print(file)
                 #os.system("gzip -d "+file )
-                os.system("./CRX2RNX " +file+" -s")
+                os.system(self.exeConfPath+"/CRX2RNX " +file+" -s")
                 # effacer observation .d avec décompression .o
                 os.remove(file)
                 
@@ -263,7 +305,7 @@ class rtklib_process():
         
 
     def calcul_rtklib(self, rep_obs, rep_rec):
-           os.chdir(rep_obs)
+           #os.chdir(rep_obs)
            file_sp3 = utils.get_files_by_ext(rep_obs,"sp3")[0]
            #un seul fichier sp3
            file_brdc = utils.get_files_by_ext(rep_obs,"n")[0]
@@ -271,14 +313,14 @@ class rtklib_process():
            files_obs = utils.get_files_by_ext(rep_obs,"o")
            #les fichiers observations des stations
            file_rec = utils.get_files_by_ext(rep_rec,"o")[0]
-           file_conf = utils.get_files_by_ext(rep_obs,"conf")[0]
+           file_conf = utils.get_files_by_ext(self.exeConfPath,"conf")[0]
 #           print ("test extensio file33333333333333333333333333333333333333")
 #           print(file_sp3,"\n\n",file_brdc,"\n\n",files_obs,"\n\n",file_rec,"\n\n",file_conf)
            for i in range(len(files_obs)):
            # a =os.system("./rnx2rtkp" 17301530.16o test.16o brdc1530.16n igr18993.sp3 -k static.conf -o out.pos")
            #print(a)
-               os.system("./rnx2rtkp " +os.path.join(rep_rec,file_rec)+" "+files_obs[i]+" "+file_brdc+" "+file_sp3+" -k "+file_conf+" -o out"+str(i)+".pos")
-               print("./rnx2rtkp " +os.path.join(rep_rec,file_rec)+" "+files_obs[i]+" "+file_brdc+" "+file_sp3+" -k "+file_conf+" -o out"+str(i)+".pos")
+               os.system(self.exeConfPath+"/rnx2rtkp " +os.path.join(rep_rec,file_rec)+" "+os.path.join(rep_obs,files_obs[i])+" "+os.path.join(rep_obs,file_brdc)+" "+os.path.join(rep_obs,file_sp3)+" -k "+os.path.join(self.exeConfPath,file_conf)+" -o "+os.path.join(rep_obs,os.path.splitext(os.path.basename(files_obs[i]))[0])+".pos")
+               print(self.exeConfPath+"/rnx2rtkp " +os.path.join(rep_rec,file_rec)+" "+files_obs[i]+" "+file_brdc+" "+file_sp3+" -k "+os.path.join(self.exeConfPath,file_conf)+" -o "+os.path.splitext(os.path.basename(files_obs[i]))[0]+".pos")
    
     
 if __name__ == "__main__":
@@ -330,11 +372,14 @@ if __name__ == "__main__":
     wd = R.tStart.wd
     #print("week in gps",wk,int(wd))
     #igr18993.sp3.Z
-    ficftp_orb_pr ="pub/products/ephemerides/"+str(wk)+"/igr"+str(wk)+str(int(wd))+".sp3.Z"
+    ficftp_orb_pr ="pub/products/ephemerides/"+str(wk)+"/igs"+str(wk)+str(int(wd))+".sp3.Z"
     #print(ficftp_orb_pr)
     #orb_pre = 
     ftp=utils.connexionftp()
-    R.downloadftp(ftp,ficftp_orb_pr,obs_dir)
+    #-----------------------------------------------remplacement par fct-----------    
+#    R.downloadftp(ftp,ficftp_orb_pr,obs_dir)
+    R.download_or_precise(ftp,ficftp_orb_pr, obs_dir)
+
     #R.gzip_crx(obs_dir)
     print("téléchargement des orbites précise")
     ftp.quit()
@@ -357,10 +402,9 @@ if __name__ == "__main__":
     #utils.send_mail('serveurRtklib@gmail.com', R.mail, "subject", "here is a test",files=pos_files, server="smtp.gmail.com", port=587, username='serveurRtklib@gmail.com', password='rtklibensg', isTls=True) 
     
     #os.chdir(project_directory)
-    utils.send_mail(R.mail, "Position final", "Veuillez trouvez ci-joint la liste de fichiers position ",pos_files,project_directory) 
+    #utils.send_mail(R.mail, "Position final", "Veuillez trouvez ci-joint la liste de fichiers position ",pos_files,project_directory) 
         
     t2 = gps.gpstime()
     #print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"+file_rec, type(file_rec))
     print ('%.3f sec elapsed ' % (t2-t1))
-
 

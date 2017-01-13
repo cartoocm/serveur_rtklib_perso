@@ -1,5 +1,8 @@
 <config>
    <paths>
-        <project>/media/farah/Data/PPMD-PERSO/INFO_CODE/serveur_rtklib</project>
+        <project_path>/media/farah/Data/PPMD-PERSO/INFO_CODE/serveur_rtklib</project_path>
+        <request-path>/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL</request-path>
+        <observation-path>/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_OBS</observation-path>
+        <exe_conf_path>/media/farah/Data/PPMD-PERSO/INFO_CODE/EXE_CONF</exe_conf_path>
     </paths>
 </config>
