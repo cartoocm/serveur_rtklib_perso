@@ -1,8 +1,9 @@
 <config>
    <paths>
         <project_path>/media/farah/Data/PPMD-PERSO/INFO_CODE/serveur_rtklib</project_path>
-        <request-path>/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL</request-path>
-        <observation-path>/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_OBS</observation-path>
+        <receiver_path>/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL</receiver_path>
+        <observation_path>/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_OBS</observation_path>
         <exe_conf_path>/media/farah/Data/PPMD-PERSO/INFO_CODE/EXE_CONF</exe_conf_path>
+        <ftp_ephemerides_path>pub/products/ephemerides</ftp_ephemerides_path>
     </paths>
 </config>
