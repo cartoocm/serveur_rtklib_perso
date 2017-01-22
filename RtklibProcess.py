@@ -30,11 +30,14 @@ class rtklib_process():
         self.proche_stations_list = []
         self.tStart = gps.gpstime()
         self.tEnd = gps.gpstime()
-        self.projectPath = utils.get_project_path()
+        self.projectPath =""
         #self.requestPath = utils.get_receiver_path()
-        self.observationPath = utils.get_observation_path()
-        self.exeConfPath = utils.get_exeConf_path()
-        self.ephemeridPath = utils.get_ephemerides_path()
+        self.observationPath = ""
+        self.exeConfPath =  ""   #utils.get_exeConf_path(self.projectPath)
+        self.ephemeridPath =  "" #utils.get_ephemerides_path(self.projectPath)
+        #self.observationPath =   utils.get_observation_path(self.projectPath)
+        #self.exeConfPath =     utils.get_exeConf_path(self.projectPath)
+        #self.ephemeridPath = utils.get_ephemerides_path(self.projectPath)
         
     def read(self,filename):
             tree = ET.parse(filename)
@@ -74,9 +77,7 @@ class rtklib_process():
         récepteur
         """
         myrinex = rx.rinex_o()
-        
         #filename = str(self.RnxFileList) 
-        #filename = '/home/farah/projet__/17301530.16o'
         ret = myrinex.load_rinex_o(filename)  # à remplacer par LoadRinexO(filename)
         print("return",ret)
         head= myrinex.headers[0]
@@ -89,8 +90,7 @@ class rtklib_process():
         
         if hasattr (head,'TIME_OF_FIRST_OBS'):
             self.tStart = head.TIME_OF_FIRST_OBS
-
-            print ("first obs time",self.tStart.doy)
+            #print ("first obs time",self.tStart.doy)
         if hasattr (head,'TIME_OF_LAST_OBS'):
             self.tEnd = head.TIME_OF_LAST_OBS
 #           print ("end obs time",self.tEnd)
@@ -98,7 +98,7 @@ class rtklib_process():
         #RGP = np.genfromtxt('stations.txt',comments ="#",skip_header=4)  #   , dtype =None #lgenfromtxt does convert string the name of station 
 
         #lecture stations
-        stations_fichier = open("stations.txt", "r")
+        stations_fichier = open(os.path.join(self.projectPath,"stations.txt"), "r")
         stations_texte = stations_fichier.readlines() #liste lignes du fichier
         stations_fichier.close()
         # on va créer attribut all_stations qui contient les ligne du fichier splité selon le format
@@ -107,7 +107,7 @@ class rtklib_process():
         self.all_stations=[]
         for line in stations_texte:
             data_station=line.split()
-            self.all_stations.append( Station(data_station[0],float(data_station[1]),float(data_station[2]),float(data_station[3])) )
+            self.all_stations.append(Station(data_station[0],float(data_station[1]),float(data_station[2]),float(data_station[3])) )
         
         for station in self.all_stations:
             #print(station.nom)
@@ -146,12 +146,12 @@ class rtklib_process():
         return (Xrec,Yrec,Zrec, head)
 
     def prepare_proche_station(self,all_sorted_list,station_number):
-        """ this function would find the n nearest stations and that have data at the date of observation 
-            on the ftp server
+        """ this function would find the n nearest stations and that have dataon the ftp server
+            at the date of observation 
             output : the list of name of the n nearest stations     
         """        
         
-        ftp = utils.connexionftp() 
+        ftp = utils.connexionftp(self.projectPath) 
         proche_stations_list =[]
         ficftp_dir = "pub/data/"+str(self.tStart.yyyy)+"/"+str(self.tStart.doy)+"/data_30"
         ftp.cwd(ficftp_dir)
@@ -330,25 +330,68 @@ class rtklib_process():
             f.write("ENSG \t\t\tCALCUL GNSS EN LIGNE \n \t\t\t\tRTKLIB 2.4.2 \t\t\n")
             f.write("------------------------------------------------------------------\n")
             f.write("\n\n")
-            orb =utils.get_files_by_ext(obs_dir,"sp3")[0]
-            f.write("ORBITES\t\t\t:"+utils.get_files_by_ext(obs_dir,"sp3")[0]+".Z\n")
+            #orb =utils.get_files_by_ext(obs_dir,"sp3")[0]
+            f.write("ORBITES\t\t\t:"+os.path.basename(utils.get_files_by_ext(obs_dir,"sp3")[0])+".Z\n")
             f.write("1/ ELEMENTS EN ENTREE \n")
-            f.write("------------------------------------------------------------------")
+            f.write("------------------------------------------------------------------\n")
             (Xrec,Yrec,Zrec, head) = self.rinex_info(os.path.join(requestDir,self.RnxFileList[0]))
             f.write(head.__str__())
 #            lines="FICHIER RINEX :"+self.RnxFileList[0]+"\n"+"EN-TETE NOM STATION :"+head.MARKER_NAME+"\n"+\
 #            "EN-TETE NUMERO    :"+head.MARKER_NUMBER+"\nEN-TETE RECEPTEUR   : "+head.REC_TYPE+"EN-TETE ANTENNE :"+\
 #            head.ANT_TYPE+"\nEN-TETE POSITION  : " +Xrec+"\t"+Yrec+"\t"+Zrec+"\n"+"EN-TETE ANT H/E/N  : "+\
 #            head.dH+"\t"+head.dE+"\n"+head.dN+"\n"+"NOMBRES D'EPOQUES"+len(head.epochs)+"\n"+"DATE DEBUT     : "+\
-#            str(print(self.tStart))+"\nDATE FIN   : "+str(print(self.tEnd))
+#            str(print(self.tStart.st_iso_epoch(5)))+"\nDATE FIN   : "+str(print(self.tEnd.st_iso_epoch(5)))
 #            #antennaFile = utils.get
             # l'idee c'est trouver l'instance de nom de l'antenne et puis rendre la premiére occurence 
             # et puis la deuxième qui est la dernière de NORTH / EAST / UP 
             # f.write(lines)
-            P, X_chap,QX_chap,sigma02,V = utils.pod_pos(obs_dir,10)
-            
-            
-            
+            P, X_chap,QX_chap,sigma02,V,list_station = utils.pod_pos(obs_dir,10)
+            antenne_text = utils.get_files_by_ext(utils.get_exeConf_path(self.projectPath),"atx")[0]
+            file_antenne = open(antenne_text, 'r')
+            lines = file_antenne.readlines()
+            bloc = utils.find_antenna_info(lines,head.ANT_TYPE)
+            listENH ,listFreq=utils.find_ENH_atx(bloc)
+            file_antenne.close()
+            f.write("ANTENNE CENTRES DE PHASES N/E/H :\n")            
+            for i in range(len(listENH)):
+                strnhe =" ".join(listENH[i])
+                a = head.ANT_TYPE +"\t" +listFreq[i]+"\t"+strnhe+"\n" #str1 = ''.join(list1)
+                f.write(a)
+            f.write("2/ STATIONS DE REFERENCE DANS UN RAYON DE "+str(self.max_distance*1000)+" m (MAX : "+str(self.station_number)+") \n")
+            f.write("------------------------------------------------------------------\n")
+            j =1
+            P , X_chap,QX_chap,sigma02,V,list_station =utils.pod_pos(obs_dir,1)
+            for stat in ((self.proche_stations_list)):
+                line1 = str(j)+" "+ stat.nom +" : \t"+str(stat.last_dist)+"m\n"
+                f.write(line1)
+                if (stat.nom in self.proche_stations_names ) and any(stat.nom.lower() in s for s in list_station ) : #if any("abc" in s for s in some_list):
+                    print("stat.nom//////////////////////////"+stat.nom +"\n")
+                    line2= stat.nom.lower()+str(self.tStart.doy)+"0."+str(self.tStart.yy)+"d.Z => "+\
+                    stat.nom.lower()+str(self.tStart.doy)+"0."+str(self.tStart.yy)+"o\n"
+                    f.write(line2)
+                else:
+                    f.write("résolution ambiguité non résolues \n")
+                j+=1
+            for stat in list_station:
+                print("hellonnnnnnnnnnnnnnnnnn_list_station",stat,"\n")
+            f.write("3/ TRAITEMENT \n")
+            f.write("------------------------------------------------------------------\n")
+            S_xx ,S_yy,S_zz =utils.generateStd(QX_chap)
+            E,N ,H, varENU , lon , lat, he =utils.gettingCoordinate(X_chap,QX_chap)
+            f.write("TRAITEMENT FINALE AMBIGUITÉ RÉSOLUES FIXÉES \n")
+            f.write("FACTEUR DE VARIANCE : "+str(sigma02[0][0]**(0.5))+"\n")
+            f.write("PRECISION INTERNE : \n")
+            f.write(" SX : "+str(S_xx)+" SY : "+str(S_yy)+" SZ : "+str(S_zz )+"\n")
+            f.write(" SN : "+str((np.abs(varENU[1][1]))**0.5)+" SE : "+str((np.abs(varENU[0][0]))**0.5)+" SH : "+str((np.abs(varENU[1][1]))**0.5)+"\n")
+            f.write("3/ RESULTATS \n") 
+            f.write("=========================== RGF93 ===================================\n")
+            f.write("POSITION RGF93 \n")
+            f.write(" X:\t"+str(X_chap[0][0])+"\tY:\t"+str(X_chap[1][0])+"\tZ:\t"+str(X_chap[2][0])+"\n")
+            f.write("COORDONNÉES GÉOGRAPHIQUES : \n")            
+            f.write("LONGITUDE\t"+str(lon)+"°\tLATITUDE\t"+str(lat)+"°\tHELL\t"+str(he)+"\n")
+            f.write("\t\t E "+utils.convertDDToDMS(lon)+"\t\t N "+utils.convertDDToDMS(lat)+"\t\t "+str(he)+"\n")
+            f.write("LAMBERT-93 : E = "+str(E)+"m\t N = "+str(N)+"m"+" H "+str(H)+"\n") 
+                
             
             
             print("success 2 ecriture fichier")
@@ -405,10 +448,11 @@ class rtklib_process():
             os.makedirs(obs_dir)
         # os.mkdir(obs_dir) does not work FileExistsError
         for stat in self.proche_stations_names:
-            ftp=utils.connexionftp()
+            ftp=utils.connexionftp(self.projectPath)
             ficftp ="pub/data/"+str(self.tStart.yyyy)+"/"+str(self.tStart.doy)+"/data_30/"+stat.lower()+str(self.tStart.doy)+str("0.")+str(self.tStart.yy)+"d.Z"
             self.downloadftp(ftp,ficftp,obs_dir)
-            ftp.quit()
+            #ftp.quit()
+            utils.fermerftp(ftp)
            
 
            
@@ -423,7 +467,7 @@ class rtklib_process():
         
         #print(ficftp_orb_pr)
         #orb_pre = 
-        ftp=utils.connexionftp()
+        ftp=utils.connexionftp(self.projectPath)
         #-----------------------------------------------remplacement par fct-----------    
         #    self.downloadftp(ftp,ficftp_orb_pr,obs_dir)
         self.download_or_precise(ftp,ficftp_orb_pr, obs_dir)
@@ -435,7 +479,7 @@ class rtklib_process():
         #    téléchargement des éphémérides radio diffusés
         ficftp_radio ="pub/data/"+str(self.tStart.yyyy)+"/"+str(self.tStart.doy)+"/data_30/"+"brdc"+str(self.tStart.doy)+str("0.")+str(self.tStart.yy)+"n.Z"
         # ftp://rgpdata.ign.fr/pub/data/2016/153/data_30/brdc1530.16n.Z   --- n : gps g : glonass
-        ftp=utils.connexionftp()
+        ftp=utils.connexionftp(self.projectPath)
         self.download_radio(ftp,ficftp_radio,obs_dir)
 
         self.unzip(obs_dir)     
@@ -443,6 +487,7 @@ class rtklib_process():
         self.gzip_crx(obs_dir)    
         #self.calcul_rtklib(obs_dir)
         self.calcul_rtklib(obs_dir,requestDir)
+        
 
         #after extracting n pos file for the position our receiver we are going to send mail 
 

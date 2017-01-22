@@ -3,55 +3,32 @@
 import re
 #import numpy as np
 import gpstime as gps
-#from gnsstoolbox import *
-#import math
-#import matplotlib.pyplot as plt
 import os
-import xml.etree.ElementTree as ET
 import RtklibProcess
 import RtklibUtils as utils
 
 
 class ManageProcess():
     def __init__(self):
-        #self.HomeDir = '/home/farah/DEPOT_CALCUL/'
-        self.HomeDir = utils.get_receiver_path()+"/"
 
-        #'/media/farah/Data/PPMD-PERSO/INFO_CODE/DEPOT_CALCUL/'
+        self.HomeDir = utils.get_receiver_path()+"/"
 
     def IsThereAnythingToDo(self):
 
         L = os.listdir(self.HomeDir)
+        R = RtklibProcess.rtklib_process()
+        R.projectPath = utils.get_project_path()
+        R.observationPath =  utils.get_observation_path(R.projectPath)
+        R.exeConfPath =     utils.get_exeConf_path(R.projectPath)
+        R.ephemeridPath = utils.get_ephemerides_path(R.projectPath)
         for d in L:
             if re.search('LOCKED',d):
                 continue
 
             RequestDir = self.HomeDir + d
-#            print(RequestDir)
-            R = RtklibProcess.rtklib_process()
-            R.projectPath = utils.get_project_path()
             R.process(RequestDir)
             os.rename(RequestDir,RequestDir+'_LOCKED')
-#            self.read(RequestDir+'/request.xml')
 
-#            tree = ET.parse(RequestDir+'/request.xml')
-#            root = tree.getroot()
-#            for child in root:
-#                if child.tag=='options':
-#                    for child2 in child:
-#                        if re.search(child2.tag,'strategy'):
-#                            self.strategy = child2.text
-#                        if re.search(child2.tag,'station_number'):
-#                            self.station_number = int(child2.text)
-#                        if re.search(child2.tag,'max_distance'):
-#                            self.max_distance = int(child2.text)
-#
-#                if child.tag=='files':
-#                    for child2 in child:
-#                        self.RnxFileList.append(child2[1].text)
-
-            #print(R)
-            #self.process()
             
 
 
@@ -60,17 +37,11 @@ class ManageProcess():
 if __name__ == "__main__":
 
     t1 = gps.gpstime()
-#    print("Packages (local only) :")
-#    for i in pip.get_installed_distributions(local_only=True):
-#        print("-",i)
-
+    
+    print ("starting here procces path",os.getcwd())
     S = ManageProcess()
     S.IsThereAnythingToDo()
-    #R = RtklibProcess.rtklib_process()
-    #d =self.()
-   # print(d)
     
-
     t2 = gps.gpstime()
     print ('%.3f sec elapsed ' % (t2-t1))
 
